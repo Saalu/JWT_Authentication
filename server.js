@@ -67,6 +67,12 @@ app.post("/login", async (req, res) => {
   }
 });
 
+// 3. Logout user
+app.post("/logout", (req, res) => {
+  res.clearCookie("resfreshtoken");
+  return res.send({ msg: "Logged out" });
+});
+
 // =============Server Port Running ==============
 const port = process.env.PORT;
 
