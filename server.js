@@ -2,6 +2,7 @@ require("dotenv/config");
 
 const express = require("express");
 const jwt = require("jsonwebtoken");
+const cors = require("cors");
 const { compare, hash } = require("bcrypt");
 const cookieParser = require("cookie-parser");
 const { isAuth } = require("./src/isAuth.js");
@@ -17,6 +18,12 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 app.get("/", async (req, res) => {
   res.send("Welcome home");
