@@ -4,6 +4,7 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const { compare, hash } = require("bcrypt");
 const cookieParser = require("cookie-parser");
+const { isAuth } = require("./src/isAuth.js");
 const {
   createAccessToken,
   createRefreshToken,
@@ -69,10 +70,51 @@ app.post("/login", async (req, res) => {
 
 // 3. Logout user
 app.post("/logout", (req, res) => {
-  res.clearCookie("resfreshtoken");
+  res.clearCookie("resfreshtoken", { path: "/refresh_token" });
   return res.send({ msg: "Logged out" });
 });
 
+//4. Protected routes
+app.post("/protected", async (req, res) => {
+  try {
+    const userId = isAuth(req, res);
+    if (userId !== null) {
+      res.send({ msg: "This is protected data" });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+//5. Get a new access token with refresh token
+app.post("/refresh_token", async (req, res) => {
+  const token = req.cookies.refreshtoken;
+  // if no token, request our token
+  if (!token) return res.send({ accesstoken: "" });
+  // we have a token, verify it
+  let payload = null;
+
+  try {
+    payload = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET);
+  } catch (err) {
+    return res.status(500).json({ accesstoken: "" });
+  }
+
+  // Token is valid, check if user exist
+  const user = fakeDB.find((user) => user.id === payload.userId);
+  if (!user) return res.send({ accesstoken: "" });
+  // user exist, check if refreshtoken exist on user
+  if (user.refreshtoken !== token) {
+    return res.send({ accesstoken: "" });
+  }
+  // Token exist, create new refresh and accesstoken
+  const accesstoken = createAccessToken(user.id);
+  const refreshtoken = createRefreshToken(user.id);
+  user.refreshtoken = refreshtoken;
+
+  sendRefreshToken(res, refreshtoken);
+  return res.send({ accesstoken });
+});
 // =============Server Port Running ==============
 const port = process.env.PORT;
 
